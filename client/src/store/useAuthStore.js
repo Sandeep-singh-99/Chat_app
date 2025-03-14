@@ -65,7 +65,7 @@ export const useAuthStore = create((set, get) => ({
                 headers: { 'Content-Type': 'multipart/form-data' }
             })
             set({ authUser: response.data.updateUserProfile })
-            toast.success('Profile image updated successfully')
+            toast.success(response.data.message)
         } catch (error) {
             toast.error(error.response.data.message)
         } finally {
