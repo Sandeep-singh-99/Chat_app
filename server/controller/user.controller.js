@@ -81,12 +81,12 @@ export const updateProfile = async (req, res) => {
             await imageKit.deleteFile(profileImage.imagekitFileId)
         }
 
-        await User.findByIdAndUpdate(req.user._id, {
+        const updateUserProfile = await User.findByIdAndUpdate(req.user._id, {
             profilePic: uploadResponse.url,
             imagekitFileId: uploadResponse.fileId
         })
 
-        res.status(200).json({ message: 'Profile image updated successfully' })
+        res.status(200).json({updateUserProfile, message: 'Profile image updated successfully' })
     } catch (error) {
         res.status(500).json({ message: error.message })
     }

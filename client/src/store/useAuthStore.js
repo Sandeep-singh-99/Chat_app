@@ -59,11 +59,12 @@ export const useAuthStore = create((set, get) => ({
     },
 
     updateProfileImage: async (data) => {
+        set({ isUpdatingProfileImage: true })
         try {
             const response = await axiosInstance.put('/auth/update-profile', data, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             })
-            set({ authUser: response.data })
+            set({ authUser: response.data.updateUserProfile })
             toast.success('Profile image updated successfully')
         } catch (error) {
             toast.error(error.response.data.message)
