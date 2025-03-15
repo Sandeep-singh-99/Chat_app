@@ -5,7 +5,8 @@ import MessageInput from "./MessageInput";
 import MessageSkeleton from "./MessageSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../utils/utils";
-import { ImageModal } from './ImageModal'
+import { ImageModal } from "./ImageModal";
+import { Download, File } from "lucide-react";
 
 const ChatContainer = () => {
   const {
@@ -48,6 +49,22 @@ const ChatContainer = () => {
     );
   }
 
+  const handleDownload = (imageUrl, fileName) => {
+    fetch(imageUrl)
+      .then((response) => response.blob())
+      .then((blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName || "image.jpg";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      })
+      .catch((error) => console.error("Download failed:", error));
+  };
+
   return (
     <div className="flex-1 flex flex-col overflow-auto">
       <ChatHeader />
@@ -81,12 +98,22 @@ const ChatContainer = () => {
             <div className="chat-bubble flex flex-col">
               {/* Display Image */}
               {message.image && (
-                <img
-                  src={message.image}
-                  alt="Attachment"
-                  className="sm:max-w-[200px] rounded-md mb-2"
-                  onClick={() => setSelectedImage(message.image)}
-                />
+                <div className="relative group">
+                  <img
+                    src={message.image}
+                    alt="Attachment"
+                    className="sm:max-w-[200px] rounded-md mb-2"
+                    onClick={() => setSelectedImage(message.image)}
+                  />
+                  <button
+                    onClick={() =>
+                      handleDownload(message.image, `chat-image-${message._id}`)
+                    }
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-gray-800 bg-opacity-70 p-1 rounded-full"
+                  >
+                    <Download size={20} className="text-white" />
+                  </button>
+                </div>
               )}
               {/* Display PDF or other files */}
               {message.file && (
@@ -97,20 +124,7 @@ const ChatContainer = () => {
                     rel="noopener noreferrer"
                     className="text-blue-500 hover:underline flex items-center gap-1"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 10v6m0 0l-3-3m3 3l3-3m-9 3V5a2 2 0 012-2h8a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V9"
-                      />
-                    </svg>
+                    <File size={20} />
                     View File (PDF)
                   </a>
                 </div>
@@ -124,9 +138,9 @@ const ChatContainer = () => {
 
       <MessageInput />
       <ImageModal
-      imageUrl={selectedImage}
-      isOpen={!!selectedImage}
-      onClose={() => setSelectedImage(null)}
+        imageUrl={selectedImage}
+        isOpen={!!selectedImage}
+        onClose={() => setSelectedImage(null)}
       />
     </div>
   );
