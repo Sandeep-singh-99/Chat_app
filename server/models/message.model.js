@@ -32,11 +32,6 @@ const messageSchema = new Schema({
     filekitFileId: {
         type: String,
     },
-    
-    group: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Group'
-    }
 },{timestamps: true})
 
 const Message = model('Message', messageSchema)

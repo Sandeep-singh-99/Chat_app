@@ -1,6 +1,5 @@
 import imageKit from "../config/imagekit.js";
 import { getReceiverSocketID, io } from "../config/socket.js";
-import Group from "../models/group.model.js";
 import Message from "../models/message.model.js";
 import User from "../models/user.model.js";
 
@@ -142,6 +141,68 @@ export const sendMessage = async (req, res) => {
     res.status(200).json(newMessage);
   } catch (error) {
     console.error("Failed to send message:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+
+
+export const deleteMessage = async (req, res) => {
+  try {
+    const { id: messageId } = req.params;
+    const userId = req.user._id;
+
+    
+    const message = await Message.findById(messageId);
+    
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+   
+    if (message.senderId.toString() !== userId.toString()) {
+      return res.status(403).json({ 
+        message: "You can only delete your own messages" 
+      });
+    }
+
+   
+    if (message.imagekitFileId) {
+      try {
+        await imageKit.deleteFile(message.imagekitFileId);
+      } catch (error) {
+        console.error("Failed to delete image from ImageKit:", error);
+      }
+    }
+
+    if (message.filekitFileId) {
+      try {
+        await imageKit.deleteFile(message.filekitFileId);
+      } catch (error) {
+        console.error("Failed to delete file from ImageKit:", error);
+      }
+    }
+
+    
+    await Message.findByIdAndDelete(messageId);
+
+    
+    const receiverSocketId = getReceiverSocketID(message.receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("messageDeleted", { 
+        messageId: messageId,
+        receiverId: message.receiverId 
+      });
+    }
+
+    return res.status(200).json({ 
+      message: "Message deleted successfully",
+      messageId: messageId 
+    });
+
+  } catch (error) {
+    console.error("Failed to delete message:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
