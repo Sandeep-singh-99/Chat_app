@@ -6,9 +6,11 @@ import cookieParser from 'cookie-parser'
 
 import ConnectDB from './config/db.js'
 import authRoutes from './router/auth.routes.js'
+import messageRoutes from './router/message.routes.js'
+import { app, server } from './config/socket.js'
 
 
-const app = express()
+// const app = express()
 const PORT = process.env.PORT || 5001
 
 app.use(cors({
@@ -21,8 +23,9 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }))
 app.use(cookieParser())
 
 app.use('/api/auth', authRoutes)
+app.use('/api/message', messageRoutes)
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`server is running on http://localhost:${PORT}`);
     ConnectDB()
 })
