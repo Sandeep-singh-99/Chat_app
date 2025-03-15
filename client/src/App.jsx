@@ -12,16 +12,12 @@ import { useAuthStore } from "./store/useAuthStore";
 import { Loader } from "lucide-react";
 
 export default function App() {
-  const { checkAuth, authUser, isCheckingAuth,  onlineUsers } = useAuthStore()
+  const { checkAuth, authUser, isCheckingAuth, onlineUsers } = useAuthStore();
   const { theme } = useThemeStore();
 
-  console.log("onlineUsers", onlineUsers);
-  
-
   useEffect(() => {
-    checkAuth()
-  },[checkAuth])
-
+    checkAuth();
+  }, [checkAuth]);
 
   if (isCheckingAuth && !authUser) {
     <div className="flex items-center justify-center h-screen">
@@ -33,10 +29,22 @@ export default function App() {
       <BrowserRouter>
         <Navbar />
         <Routes>
-          <Route path="/" element={authUser ? <Home /> : <Navigate to={"/login"}/>} />
-          <Route path="/login" element={!authUser ? <Login /> : <Navigate to={"/"}/>} />
-          <Route path="/signup" element={!authUser ? <Signup /> : <Navigate to={"/"}/>}/>
-          <Route path="/profile" element={authUser ? <Profile /> : <Navigate to={"/login"}/>} />
+          <Route
+            path="/"
+            element={authUser ? <Home /> : <Navigate to={"/login"} />}
+          />
+          <Route
+            path="/login"
+            element={!authUser ? <Login /> : <Navigate to={"/"} />}
+          />
+          <Route
+            path="/signup"
+            element={!authUser ? <Signup /> : <Navigate to={"/"} />}
+          />
+          <Route
+            path="/profile"
+            element={authUser ? <Profile /> : <Navigate to={"/login"} />}
+          />
           <Route path="/setting" element={<Setting />} />
         </Routes>
         <Toaster />

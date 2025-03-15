@@ -96,11 +96,11 @@ export const useAuthStore = create((set, get) => ({
 
     // Debugging the socket connection status
     socket.on("connect", () => {
-      console.log("Socket connected:", socket.id);
+     
     });
 
     socket.on("getOnlineUsers", (userIds) => {
-        console.log('Online users received:', userIds);
+        
       set({ onlineUsers: userIds });
     });
   },

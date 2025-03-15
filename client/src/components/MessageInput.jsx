@@ -16,7 +16,6 @@ export default function MessageInput() {
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) {
-      console.log("No file selected");
       return;
     }
 
@@ -51,7 +50,6 @@ export default function MessageInput() {
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!text.trim() && !file) {
-      console.log("No text or file to send");
       return;
     }
   
@@ -61,7 +59,6 @@ export default function MessageInput() {
       const formData = new FormData();
       if (text.trim()) formData.append("text", text.trim());
       if (file) {
-        console.log("Appending file:", file);
         if (file.type.startsWith("image/")) {
           formData.append("image", file);
         } else {
@@ -69,7 +66,6 @@ export default function MessageInput() {
         }
       }
   
-      console.log("FormData contents:");
       for (let pair of formData.entries()) {
         console.log(`${pair[0]}:`, pair[1]);
       }
@@ -86,7 +82,6 @@ export default function MessageInput() {
       setShowEmojiPicker(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (error) {
-      console.error("Failed to send message:", error);
       toast.error("Failed to send message");
     } finally {
       setIsUploading(false);
