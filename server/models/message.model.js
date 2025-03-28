@@ -20,6 +20,12 @@ const messageSchema = new Schema({
     image: {
         type: String,
     },
+    videos: {
+        type: String,
+    },
+    videoKitFileId: {
+        type: String,
+    },
 
     file: {
         type: String,

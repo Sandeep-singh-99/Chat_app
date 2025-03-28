@@ -88,6 +88,9 @@ export const getMessage = async (req, res) => {
   }
 };
 
+
+
+
 export const sendMessage = async (req, res) => {
   try {
     const { text } = req.body;
@@ -96,43 +99,72 @@ export const sendMessage = async (req, res) => {
 
     let imageUrl = "";
     let fileUrl = "";
+    let videoUrl = "";
     let imagekitFileId = "";
     let filekitFileId = "";
+    let videoKitFileId = "";
 
+    // Handle image upload
     if (req.files && req.files["image"]) {
+      const imageFile = req.files["image"][0];
+      if (!imageFile.mimetype.startsWith("image/")) {
+        return res.status(400).json({ message: "Invalid image file type" });
+      }
       const uploadResponse = await imageKit.upload({
-        file: req.files["image"][0].buffer,
-        fileName: req.files["image"][0].originalname,
+        file: imageFile.buffer,
+        fileName: imageFile.originalname,
         folder: "/chat_app",
       });
       imageUrl = uploadResponse.url;
       imagekitFileId = uploadResponse.fileId;
     }
 
+    // Handle file upload (e.g., PDF)
     if (req.files && req.files["file"]) {
+      const file = req.files["file"][0];
       const uploadResponse = await imageKit.upload({
-        file: req.files["file"][0].buffer,
-        fileName: req.files["file"][0].originalname,
+        file: file.buffer,
+        fileName: file.originalname,
         folder: "/chat_app",
       });
       fileUrl = uploadResponse.url;
       filekitFileId = uploadResponse.fileId;
     }
 
-    if (!text && !imageUrl && !fileUrl) {
+    // Handle video upload
+    if (req.files && req.files["video"]) {
+      const videoFile = req.files["video"][0];
+      if (!videoFile.mimetype.startsWith("video/")) {
+        return res.status(400).json({ message: "Invalid video file type" });
+      }
+      const uploadResponse = await imageKit.upload({
+        file: videoFile.buffer,
+        fileName: videoFile.originalname,
+        folder: "/chat_app",
+      });
+      videoUrl = uploadResponse.url;
+      videoKitFileId = uploadResponse.fileId;
+    }
+
+    // Check if the message is empty
+    if (!text?.trim() && !imageUrl && !fileUrl && !videoUrl) {
       return res.status(400).json({ message: "Message cannot be empty" });
     }
 
+    // Create the new message
     const newMessage = await Message.create({
       senderId,
       receiverId,
-      text: text || "",
+      text: text?.trim() || "",
       image: imageUrl || "",
       imagekitFileId: imagekitFileId || "",
       file: fileUrl || "",
       filekitFileId: filekitFileId || "",
+      videos: videoUrl || "", 
+      videoKitFileId: videoKitFileId || "",
     });
 
+    // Emit the new message to the receiver via Socket.IO
     const receiverSocketId = getReceiverSocketID(receiverId);
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", newMessage);
@@ -141,11 +173,9 @@ export const sendMessage = async (req, res) => {
     res.status(200).json(newMessage);
   } catch (error) {
     console.error("Failed to send message:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Failed to send message", error: error.message });
   }
 };
-
-
 
 
 export const deleteMessage = async (req, res) => {
@@ -173,6 +203,14 @@ export const deleteMessage = async (req, res) => {
         await imageKit.deleteFile(message.imagekitFileId);
       } catch (error) {
         console.error("Failed to delete image from ImageKit:", error);
+      }
+    }
+
+    if (message.videoKitFileId) {
+      try {
+        await imageKit.deleteFile(message.videoKitFileId);
+      } catch (error) {
+        console.error("Failed to delete video from ImageKit:", error);
       }
     }
 

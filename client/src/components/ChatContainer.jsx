@@ -9,7 +9,6 @@ import { ImageModal } from "./ImageModal";
 import { Download, File, Trash2, Copy } from "lucide-react";
 import toast from "react-hot-toast";
 
-// Memoized MessageItem component for performance
 const MessageItem = memo(
   ({
     message,
@@ -51,8 +50,26 @@ const MessageItem = memo(
               <img
                 src={message.image}
                 alt="Attachment"
-                className="sm:max-w-[200px] rounded-md mb-2"
-                onClick={() => onDownload(message.image, true)}
+                className="sm:max-w-[200px] rounded-md mb-2 cursor-pointer"
+                onClick={() => onDownload(message.image, true)} 
+              />
+            </div>
+          )}
+          {message.videos && (
+            <div className="relative">
+              <video
+                src={message.videos}
+                controls
+                className="sm:max-w-[200px] rounded-md mb-2 cursor-pointer"
+                onClick={
+                  (e) =>
+                    e.target.paused &&
+                    onDownload(
+                      message.videos,
+                      false,
+                      `chat-video-${message._id}`
+                    ) // Direct download if paused
+                }
               />
             </div>
           )}
@@ -65,22 +82,25 @@ const MessageItem = memo(
                 className="text-blue-500 hover:underline flex items-center gap-1"
               >
                 <File size={20} />
-                View File (PDF)
+                View File
               </a>
             </div>
           )}
-          {message.text && <p className="break-words whitespace-pre-wrap overflow-hidden text-ellipsis">{message.text}</p>}
+          {message.text && (
+            <p className="break-words whitespace-pre-wrap overflow-hidden text-ellipsis">
+              {message.text}
+            </p>
+          )}
         </div>
 
-        {/* WhatsApp-like action menu for all messages */}
         <div
           className={`absolute top-0 ${
             isSender ? "right-0 mr-2" : "left-0 ml-2"
           } mt-[-20px] opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
         >
           <div className="flex items-center gap-2 bg-gray-800 bg-opacity-90 rounded-lg p-1 shadow-lg">
-            {/* Copy button - hidden for image-only messages */}
-            {message.text && !message.image && (
+            {/* Copy button - available to both sender and receiver for text-only messages */}
+            {message.text && !message.image && !message.videos && (
               <button
                 onClick={() => onCopy(message.text)}
                 className="p-1 hover:bg-gray-700 rounded"
@@ -89,14 +109,20 @@ const MessageItem = memo(
                 <Copy size={16} className="text-white" />
               </button>
             )}
-            {/* Download button - only for sender with images */}
-            {isSender && message.image && (
+            {/* Download/Preview button - available to both sender and receiver */}
+            {(message.image || message.videos) && (
               <button
                 onClick={() =>
-                  onDownload(message.image, false, `chat-image-${message._id}`)
+                  onDownload(
+                    message.image || message.videos,
+                    message.image ? true : false, 
+                    message.image
+                      ? `chat-image-${message._id}`
+                      : `chat-video-${message._id}`
+                  )
                 }
                 className="p-1 hover:bg-gray-700 rounded"
-                title="Download"
+                title={message.image ? "Preview" : "Download"}
               >
                 <Download size={16} className="text-white" />
               </button>
@@ -150,29 +176,36 @@ const ChatContainer = () => {
   ]);
 
   useEffect(() => {
-    if (messageEndRef.current && messages) {
+    if (messageEndRef.current && messages)
       messageEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
   }, [messages]);
 
-  const handleDownload = (imageUrl, isPreview = false, fileName) => {
-    if (isPreview) {
-      setSelectedImage(imageUrl);
+  const handleDownload = (mediaUrl, isImagePreview = false, fileName) => {
+    if (isImagePreview) {
+      setSelectedImage(mediaUrl); 
       return;
     }
-    fetch(imageUrl)
-      .then((response) => response.blob())
+
+    fetch(mediaUrl)
+      .then((response) => {
+        if (!response.ok) throw new Error("Network response was not ok");
+        return response.blob();
+      })
       .then((blob) => {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = fileName || "image.jpg";
+        link.download = fileName || "video.mp4"; 
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
+        toast.success("Video download started");
       })
-      .catch((error) => console.error("Download failed:", error));
+      .catch((error) => {
+        console.error("Download failed:", error);
+        toast.error("Failed to download video");
+      });
   };
 
   const handleDeleteMessage = async (messageId) => {
@@ -185,18 +218,16 @@ const ChatContainer = () => {
     setDeletingMessageId(messageId);
     try {
       await deleteMessage(messageId);
+      toast.success("Message deleted");
     } catch (error) {
-      // Error is already handled in the store
+      toast.error("Failed to delete message");
     } finally {
       setDeletingMessageId(null);
     }
   };
 
   const handleCopyMessage = (text) => {
-    if (!text) {
-      toast.error("No text to copy");
-      return;
-    }
+    if (!text) return toast.error("No text to copy");
     navigator.clipboard
       .writeText(text)
       .then(() => toast.success("Message copied to clipboard"))

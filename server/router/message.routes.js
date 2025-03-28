@@ -9,7 +9,7 @@ router.route('/users').get(authMiddleware, getUsersForSideBar)
 
 router.route('/chat-message/:id').get(authMiddleware, getMessage)
 
-router.route('/send/:id').post(authMiddleware, upload.fields([{ name: 'image' }, { name: 'file' }]), sendMessage)
+router.route('/send/:id').post(authMiddleware, upload.fields([{ name: 'image' }, { name: 'file' }, { name: 'video'}]), sendMessage)
 
 router.route('/delete-message/:id').delete(authMiddleware, deleteMessage)
 

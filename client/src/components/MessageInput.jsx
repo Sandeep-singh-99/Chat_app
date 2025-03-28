@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { useChatStore } from "../store/useChatStore";
 import toast from "react-hot-toast";
-import { Image, Send, X, FileText, Loader2, Smile } from "lucide-react";
+import { Image, Send, X, FileText, Loader2, Smile, Video } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 
 export default function MessageInput() {
@@ -15,9 +15,7 @@ export default function MessageInput() {
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
-    if (!selectedFile) {
-      return;
-    }
+    if (!selectedFile) return;
 
     if (selectedFile.size > 5 * 1024 * 1024) {
       toast.error("File size must be under 5MB");
@@ -26,15 +24,22 @@ export default function MessageInput() {
 
     setFile(selectedFile);
 
-    if (selectedFile.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFilePreview({
-          type: "image",
-          url: reader.result,
-          name: selectedFile.name,
-        });
-      };
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFilePreview({
+        type: selectedFile.type.startsWith("image/")
+          ? "image"
+          : selectedFile.type.startsWith("video/")
+          ? "video"
+          : "file",
+        url: reader.result,
+        name: selectedFile.name,
+      });
+    };
+    if (
+      selectedFile.type.startsWith("image/") ||
+      selectedFile.type.startsWith("video/")
+    ) {
       reader.readAsDataURL(selectedFile);
     } else {
       setFilePreview({ type: "file", url: null, name: selectedFile.name });
@@ -49,49 +54,42 @@ export default function MessageInput() {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!text.trim() && !file) {
-      return;
-    }
-  
+    if (!text.trim() && !file) return;
+
     setIsUploading(true);
-  
     try {
       const formData = new FormData();
       if (text.trim()) formData.append("text", text.trim());
       if (file) {
-        if (file.type.startsWith("image/")) {
-          formData.append("image", file);
-        } else {
-          formData.append("file", file);
-        }
+        if (file.type.startsWith("image/")) formData.append("image", file);
+        else if (file.type.startsWith("video/")) formData.append("video", file);
+        else formData.append("file", file);
       }
-  
-      for (let pair of formData.entries()) {
-        console.log(`${pair[0]}:`, pair[1]);
-      }
-  
-      if (!formData.has("text") && !formData.has("image") && !formData.has("file")) {
+
+      if (
+        !formData.has("text") &&
+        !formData.has("image") &&
+        !formData.has("video") &&
+        !formData.has("file")
+      ) {
         throw new Error("No valid data to send");
       }
-  
+
       await sendMessage(formData);
-  
       setText("");
       setFile(null);
       setFilePreview(null);
       setShowEmojiPicker(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (error) {
-      toast.error("Failed to send message");
+      toast.error(`Failed to send message: ${error.message}`);
     } finally {
       setIsUploading(false);
     }
   };
 
-  // Handle emoji selection
-  const onEmojiClick = (emojiObject) => {
-    setText((prevText) => prevText + emojiObject.emoji);
-  };
+  const onEmojiClick = (emojiObject) =>
+    setText((prev) => prev + emojiObject.emoji);
 
   return (
     <div className="p-4 w-full">
@@ -102,6 +100,12 @@ export default function MessageInput() {
               <img
                 src={filePreview.url}
                 alt="Preview"
+                className="w-20 h-20 object-cover rounded-lg border border-zinc-700"
+              />
+            ) : filePreview.type === "video" ? (
+              <video
+                src={filePreview.url}
+                controls
                 className="w-20 h-20 object-cover rounded-lg border border-zinc-700"
               />
             ) : (
@@ -115,7 +119,6 @@ export default function MessageInput() {
             <button
               onClick={removeFile}
               className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-base-300 flex items-center justify-center"
-              type="button"
               disabled={isUploading}
             >
               <X className="size-3" />
@@ -137,7 +140,6 @@ export default function MessageInput() {
             onChange={(e) => setText(e.target.value)}
             disabled={isUploading}
           />
-          {/* Emoji Button */}
           <button
             type="button"
             className="absolute right-12 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-emerald-500"
@@ -151,6 +153,7 @@ export default function MessageInput() {
             className="hidden"
             ref={fileInputRef}
             onChange={handleFileChange}
+            accept="image/*,video/*,application/pdf"
             disabled={isUploading}
           />
           <button
@@ -173,7 +176,6 @@ export default function MessageInput() {
             <Send size={22} />
           )}
         </button>
-        {/* Emoji Picker */}
         {showEmojiPicker && (
           <div className="absolute bottom-16 left-0 z-10">
             <EmojiPicker onEmojiClick={onEmojiClick} width={300} height={400} />
